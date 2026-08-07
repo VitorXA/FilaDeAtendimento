@@ -1,0 +1,104 @@
+#page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rem;
+  padding: 1rem;
+}
+h1 {
+  color: darkcyan;
+  width: 100%;
+  text-align: center;
+  flex-direction: column;
+  display: flex;
+}
+section {
+  background-color: cadetblue;
+  border-radius: 2rem;
+  width: 33rem;
+  height: 32rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.33rem;
+}
+#container {
+  background-color: whitesmoke;
+  width: 33rem;
+  height: 37rem;
+  padding: 1rem;
+  border-radius: 2rem;
+  border: 0.033rem;
+  border-color: darkcyan;
+}
+.button {
+  display: flex;
+  flex-direction: column;
+  border-width: 0.033rem;
+  border-color: whitesmoke;
+  border-style: solid;
+  background-color: cadetblue;
+  width: 90%;
+  height: 12rem;
+  border-radius: 2rem;
+  text-align: center;
+  justify-content: flex-start;
+  align-items: center;
+}
+h2 {
+  color: whitesmoke;
+  padding: 0.33rem;
+}
+.icons {
+  color: whitesmoke;
+  font-size: 7rem;
+}
+
+.textField {
+  display: flex;
+  flex-direction: column;
+  border-width: 0.033rem;
+  border-color: darkcyan;
+  border-style: solid;
+  background-color: whitesmoke;
+  width: 90%;
+  height: 3rem;
+  border-radius: 2rem;
+  text-align: center;
+  justify-content: flex-start;
+  align-items: center;
+}
+.actionButton {
+  display: flex;
+  flex-direction: column;
+  border-width: 0.033rem;
+  border-color: whitesmoke;
+  border-style: solid;
+  background-color: darkcyan;
+  width: 90%;
+  height: 3rem;
+  border-radius: 2rem;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+}
+.boxButton {
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+}
+.linkLoguin{
+  text-decoration: none;
+  color:blue;
+
+}
+.actionBox{
+  display: flex;
+  width: 30rem;
+  height: 7rem;
+  flex-direction: row;
+  align-items:last baseline;
+}

@@ -1,0 +1,19 @@
+import { useState } from "react";
+import InitialPage from "./pages/initialPage";
+import ClientPage from "./pages/clientPage";
+import ProviderPage from "./pages/providerPage";
+
+function App() {
+  const [page, setPage] = useState(0);
+  if (page === 0) {
+    return <InitialPage setPage={setPage} />;
+  }
+  if (page === 2) {
+    return <ClientPage setPage={setPage}/>;
+  }
+  if (page === 1) {
+    return <ProviderPage setPage={setPage}/>;
+  }
+}
+
+export default App;
