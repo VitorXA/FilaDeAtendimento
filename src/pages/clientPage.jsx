@@ -3,7 +3,7 @@ export default function ProviderPage({ setPage }) {
     <div id="page">
       <div id="container">
         <div className="boxButton">
-          <h1> TELA DE LOGIN </h1>
+          <h1> TELA DE ACESSO </h1>
           <section>
             <h2> Digite seu nome e sobrenome</h2>
             <input type="text" className="textField" />
