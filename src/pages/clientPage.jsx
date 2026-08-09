@@ -1,5 +1,19 @@
 export default function  ProviderPage({ setPage }) {
+const [client, setClient] = useState(0)
+IF(client == 0) {
   return (
+    <div id="page">
+      <div id="container">
+        <div className="boxButton">
+          <h1> SUA POSIÇÃO NA QUEUE</h1>
+          <section>
+            <h3> "NUMBER HERE" </h3>
+          </section>
+        </div>
+      </div>
+    </div>
+  );} IF (client == 1) 
+{return (
     <div id="page">
       <div id="container">
         <div className="boxButton">
@@ -21,4 +35,5 @@ export default function  ProviderPage({ setPage }) {
       </div>
     </div>
   );
+}
 }
