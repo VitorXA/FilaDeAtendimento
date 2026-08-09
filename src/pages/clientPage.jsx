@@ -1,4 +1,4 @@
-export default function ProviderPage({ setPage }) {
+export default function  ProviderPage({ setPage }) {
   return (
     <div id="page">
       <div id="container">
@@ -7,7 +7,7 @@ export default function ProviderPage({ setPage }) {
           <section>
             <h2> Digite seu nome e sobrenome</h2>
             <input type="text" className="textField" />
-            <h2> Digite o código da LINE</h2>
+            <h2> Digite o código da QUEUE </h2>
             <input type="text" className="textField" />
 
             <div className="actionBox">
