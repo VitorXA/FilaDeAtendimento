@@ -117,7 +117,7 @@ export default function ClientPage({ setPage }) {
           </label>
           {error && <p className="error">{error}</p>}
           <button className="primary" disabled={loading}>
-            {loading ? "ENTRANDO..." : "GERAR ACCESS KEY"}
+            {loading ? "ENTRANDO..." : "ENTRAR NA FILA"}
           </button>
         </form>
       </div>

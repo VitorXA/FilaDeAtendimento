@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { api, clearSession, saveSession, session } from "../api";
+
 function Login({ onDone, setPage }) {
   const [register, setRegister] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [cpf, setCpf] = useState("");
   const [error, setError] = useState("");
+
   const submit = async (e) => {
     e.preventDefault();
     setError("");
@@ -20,6 +22,7 @@ function Login({ onDone, setPage }) {
       setError(e.message);
     }
   };
+
   return (
     <main className="page">
       <div className="container">
@@ -70,6 +73,7 @@ function Login({ onDone, setPage }) {
     </main>
   );
 }
+
 export default function ProviderPage({ setPage }) {
   const [sess, setSess] = useState(session());
   const [queues, setQueues] = useState([]);
@@ -77,21 +81,27 @@ export default function ProviderPage({ setPage }) {
   const [form, setForm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [snapshot, setSnapshot] = useState(null);
+
   const load = async () => {
     if (!sess.token) return;
     try {
       const d = await api("/queues/mine", { token: sess.token });
       setQueues(d.queues);
-      if (!selected && d.queues[0]) setSelected(d.queues[0].id);
+      if (!selected && d.queues && d.queues[0]) {
+        setSelected(d.queues[0].id);
+      }
     } catch (e) {
       setError(e.message);
     }
   };
+
   useEffect(() => {
     load();
   }, [sess.token]);
+
   const state = async () => (selected ? api(`/queues/${selected}`) : null);
-  const [snapshot, setSnapshot] = useState(null);
+
   useEffect(() => {
     if (!selected) return;
     let alive = true;
@@ -100,7 +110,8 @@ export default function ProviderPage({ setPage }) {
         const d = await state();
         if (alive) setSnapshot(d);
       } catch (e) {
-        setError(e.message);
+        // Evita exibir erro na tela se a fila foi alterada ou removida
+        if (alive && selected) setError(e.message);
       }
     };
     poll();
@@ -110,8 +121,10 @@ export default function ProviderPage({ setPage }) {
       clearInterval(i);
     };
   }, [selected]);
+
   if (!sess.token)
     return <Login setPage={setPage} onDone={(u) => setSess(session())} />;
+
   const create = async () => {
     if (!form.trim()) return;
     try {
@@ -127,6 +140,35 @@ export default function ProviderPage({ setPage }) {
       setError(e.message);
     }
   };
+
+  const deleteQueue = async () => {
+    if (!selected) return;
+    if (!confirm("Tem certeza que deseja deletar esta fila?")) return;
+    
+    const targetId = selected;
+    
+    // Limpa os estados imediatamente para parar o polling antes da requisição acabar
+    setSelected(null);
+    setSnapshot(null);
+    setError("");
+
+    try {
+      await api(`/queues/${targetId}`, {
+        method: "DELETE",
+        token: sess.token,
+      });
+      const updatedQueues = queues.filter((q) => q.id !== targetId);
+      setQueues(updatedQueues);
+      if (updatedQueues[0]) {
+        setSelected(updatedQueues[0].id);
+      }
+    } catch (e) {
+      setError(e.message);
+      // Caso falte o método no backend, restaura o ID selecionado localmente
+      setSelected(targetId);
+    }
+  };
+
   const next = async () => {
     setLoading(true);
     try {
@@ -140,6 +182,7 @@ export default function ProviderPage({ setPage }) {
       setLoading(false);
     }
   };
+
   const finish = async () => {
     if (snapshot?.current)
       await api(`/queues/${selected}/finish`, {
@@ -148,6 +191,7 @@ export default function ProviderPage({ setPage }) {
         body: { ticketId: snapshot.current.id },
       });
   };
+
   const skip = async () => {
     if (snapshot?.current)
       await api(`/queues/${selected}/skip`, {
@@ -156,6 +200,7 @@ export default function ProviderPage({ setPage }) {
         body: { ticketId: snapshot.current.id },
       });
   };
+
   return (
     <main className="page">
       <div className="container provider-dashboard">
@@ -182,22 +227,33 @@ export default function ProviderPage({ setPage }) {
             CRIAR FILA
           </button>
         </div>
-        <label className="select-label">
-          Fila
-          <select
-            value={selected || ""}
-            onChange={(e) => setSelected(Number(e.target.value))}
-          >
-            <option value="" disabled>
-              Selecione
-            </option>
-            {queues.map((q) => (
-              <option key={q.id} value={q.id}>
-                {q.name} — {q.code}
+        
+        <div className="selection-container">
+          <label className="select-label">
+            Fila
+            <select
+              value={selected || ""}
+              onChange={(e) => setSelected(Number(e.target.value))}
+            >
+              <option value="" disabled>
+                Selecione
               </option>
-            ))}
-          </select>
-        </label>
+              {queues.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.name} — {q.code}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button 
+            className="btn-delete" 
+            onClick={deleteQueue}
+            disabled={!selected}
+          >
+            Deletar Fila
+          </button>
+        </div>
+
         {snapshot && (
           <>
             <div className="queue-code">
@@ -210,11 +266,11 @@ export default function ProviderPage({ setPage }) {
             </div>
             <div className="stats">
               <div>
-                <span>Aguardando</span>
+                <span>Pessoas aguardando</span>
                 <strong>{snapshot.waitingCount}</strong>
               </div>
               <div>
-                <span>Próxima</span>
+                <span>Próxima senha</span>
                 <strong>{snapshot.waiting[0] ?? "—"}</strong>
               </div>
             </div>
