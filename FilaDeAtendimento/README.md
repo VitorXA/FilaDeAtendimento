@@ -1,134 +1,83 @@
-# Fila de Atendimento — PostgreSQL + Redis, sem Docker
+# Fila de Atendimento
 
-Sistema de filas com React + Node.js/Express + PostgreSQL + Redis.
+Aplicação web simples para organizar atendimentos por ordem de chegada. O **coordenador** cria uma fila e compartilha o código; o **aluno** informa nome e código para receber uma senha e acompanhar a chamada.
 
-## O que mudou nesta versão
+## Funcionalidades
 
-- Não usa Docker.
-- Não usa máquina virtual ou WSL.
-- PostgreSQL continua sendo o banco permanente.
-- Redis continua sendo usado para a fila de espera/cache.
-- No Windows, o Redis pode ser fornecido pelo Memurai, que é compatível com a API Redis e pode rodar como serviço nativo do Windows.
-- O backend cria/verifica as tabelas automaticamente ao iniciar.
-- A API escuta em `0.0.0.0`, permitindo usar o sistema por outros PCs da rede.
+- Cadastro e login do coordenador.
+- Criar, selecionar e excluir as próprias filas.
+- Entrar em uma fila pelo código gerado.
+- Visualizar senhas em espera e atendimento atual, com atualização periódica.
+- Chamar a próxima pessoa, finalizar ou pular o atendimento atual.
+- Acompanhar a posição e o status da senha pelo navegador.
 
-## Requisitos
+O layout foi preservado do projeto original.
 
-- Windows 10/11 64-bit
-- Node.js 20+
-- PostgreSQL instalado no Windows
-- Redis compatível no Windows (Memurai é a opção recomendada para este projeto)
+## Tecnologias
 
-## 1. PostgreSQL
+- **Frontend:** React, Vite e CSS.
+- **Backend:** Node.js e Express.
+- **Banco de dados:** PostgreSQL (dados persistentes).
+- **Fila auxiliar:** Redis ou servidor compatível, como Memurai no Windows.
 
-Instale o PostgreSQL e crie um banco chamado `fila_atendimento`.
+## Como executar localmente
 
-No pgAdmin:
+**Pré-requisitos:** Node.js 20 ou superior, PostgreSQL e Redis (porta padrão `6379`). Não é necessário Docker.
 
-1. Servers → PostgreSQL → Databases.
-2. Clique com o botão direito em Databases → Create → Database.
-3. Nome: `fila_atendimento`.
-4. Salve.
+1. Crie no PostgreSQL um banco vazio chamado `fila_atendimento`. As tabelas são criadas automaticamente quando a API inicia.
+2. Dentro de `backend`, copie `.env.example` para `.env`. Edite `DATABASE_URL` com a senha correta do PostgreSQL e substitua `JWT_SECRET` por uma chave longa e aleatória. Verifique que o Redis está em execução.
+3. Instale as dependências e inicie a API:
 
-Não precisa executar `backend/sql/init.sql` manualmente: o backend faz isso ao iniciar.
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+   ```
 
-## 2. Redis no Windows
+4. Em outro terminal, inicie a interface:
 
-O projeto espera Redis em `localhost:6379`.
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-No Windows, use um Redis compatível nativo, como Memurai, e deixe o serviço iniciado na porta 6379.
+5. Acesse **http://localhost:5173** no navegador. Para verificar os serviços da API, abra **http://localhost:3000/api/health**: o retorno deve indicar `postgres: "ok"` e `redis: "ok"`.
 
-## 3. Configurar o backend
+Por padrão, o frontend acessa a API em `http://localhost:3000/api`. Para usar outro endereço, copie `frontend/.env.example` para `frontend/.env` e ajuste `VITE_API_URL`.
 
-Abra `backend/.env` e ajuste principalmente:
+## Como testar o fluxo
 
-```env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=SUA_SENHA
-DATABASE_URL=postgresql://postgres:SUA_SENHA@localhost:5432/fila_atendimento
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=uma-chave-grande-e-aleatoria
-HOST=0.0.0.0
-PORT=3000
-CLIENT_URL=http://localhost:5173
+1. Acesse **Coordenador** e cadastre uma conta.
+2. Crie uma fila e copie o código mostrado na tela.
+3. Em outra aba ou navegador, entre em **Aluno**, informe nome e código e receba sua senha.
+4. Na tela do coordenador, clique em **Chamar o próximo**.
+5. Finalize ou pule a senha atual. Na tela do aluno, observe a atualização do status.
+
+## Comandos úteis
+
+No diretório `frontend`, `npm run build` gera a versão de produção em `dist/` e `npm run lint` analisa o código. No diretório `backend`, `npm start` inicia a API sem modo de observação.
+
+## Configuração em rede
+
+Por segurança, o exemplo configura a API para `127.0.0.1`. Para acessar de outros computadores da rede local, configure `HOST=0.0.0.0` no `backend/.env`, ajuste `CLIENT_URL` para a origem do frontend e use o IP do servidor em `VITE_API_URL`. Exponha apenas a API e não abra PostgreSQL ou Redis diretamente para os clientes.
+
+A publicação do código no GitHub **não hospeda automaticamente** a API, o PostgreSQL ou o Redis. Para usar na internet, é preciso hospedar esses serviços separadamente e configurar HTTPS.
+
+## Organização
+
+```text
+backend/
+  sql/init.sql              # estrutura do banco
+  src/config/               # conexões e inicialização
+  src/routes/               # autenticação, filas e senhas
+  src/services/             # sincronização das filas
+frontend/
+  src/pages/                # telas do coordenador e aluno
+  src/App.css               # visual original preservado
+  src/api.js                # comunicação com a API
 ```
 
-Se a senha do PostgreSQL tiver caracteres especiais, é melhor configurar a URL com esses caracteres devidamente codificados ou usar as variáveis de conexão separadas.
+## Segurança
 
-## 4. Instalar dependências
-
-Backend:
-
-```bat
-cd backend
-npm install
-```
-
-Frontend:
-
-```bat
-cd frontend
-npm install
-```
-
-## 5. Iniciar
-
-Backend:
-
-```bat
-cd backend
-npm run dev
-```
-
-Frontend, em outro terminal:
-
-```bat
-cd frontend
-npm run dev
-```
-
-Abra:
-
-`http://localhost:5173`
-
-Teste a API:
-
-`http://localhost:3000/api/health`
-
-O resultado esperado é parecido com:
-
-```json
-{"ok":true,"postgres":"ok","redis":"ok"}
-```
-
-## 6. Usar em vários PCs na mesma rede
-
-O PC que executa PostgreSQL + Redis + backend será o servidor.
-
-Descubra o IPv4 dele com:
-
-```bat
-ipconfig
-```
-
-Exemplo: `192.168.1.100`.
-
-No `frontend/.env` dos PCs clientes:
-
-```env
-VITE_API_URL=http://192.168.1.100:3000/api
-```
-
-No `backend/.env` do servidor, adicione os endereços dos frontends em `CLIENT_URL`, separados por vírgula, ou use `*` durante o desenvolvimento.
-
-Depois faça novamente:
-
-```bat
-npm run build
-```
-
-O frontend precisa ser servido pelo Vite ou por um servidor web. O PostgreSQL e o Redis não devem ser expostos diretamente aos computadores clientes; somente a API deve ser acessível pela rede.
-
-## Importante
-
-Para acesso pela internet, e não apenas pela rede local, será necessário hospedar a API e o PostgreSQL/Redis em um servidor acessível pela internet e configurar HTTPS. Esta versão já deixa o backend preparado para receber conexões de outros computadores, mas `localhost` só funciona no próprio PC.
+Nunca envie os arquivos `.env` ou senhas para o GitHub. O `.gitignore` já exclui esses arquivos e pastas de dependências. Os arquivos `.env.example` servem apenas como modelos de configuração.

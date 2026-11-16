@@ -7,10 +7,12 @@ function Login({ onDone, setPage }) {
   const [password, setPassword] = useState("");
   const [cpf, setCpf] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setError("");
+    setSubmitting(true);
     try {
       const d = await api(`/auth/${register ? "register" : "login"}`, {
         method: "POST",
@@ -20,6 +22,8 @@ function Login({ onDone, setPage }) {
       onDone(d.user);
     } catch (e) {
       setError(e.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -60,8 +64,8 @@ function Login({ onDone, setPage }) {
             </label>
           )}
           {error && <p className="error">{error}</p>}
-          <button className="primary">
-            {register ? "CADASTRAR-SE" : "ENTRAR"}
+          <button className="primary" disabled={submitting}>
+            {submitting ? "AGUARDE..." : register ? "CADASTRAR-SE" : "ENTRAR"}
           </button>
         </form>
         <button className="link" onClick={() => setRegister(!register)}>
@@ -88,9 +92,7 @@ export default function ProviderPage({ setPage }) {
     try {
       const d = await api("/queues/mine", { token: sess.token });
       setQueues(d.queues);
-      if (!selected && d.queues && d.queues[0]) {
-        setSelected(d.queues[0].id);
-      }
+      setSelected((current) => d.queues.some((q) => q.id === current) ? current : (d.queues[0]?.id ?? null));
     } catch (e) {
       setError(e.message);
     }
@@ -100,15 +102,13 @@ export default function ProviderPage({ setPage }) {
     load();
   }, [sess.token]);
 
-  const state = async () => (selected ? api(`/queues/${selected}`) : null);
-
   useEffect(() => {
-    if (!selected) return;
+    if (!selected) { return; }
     let alive = true;
     const poll = async () => {
       try {
-        const d = await state();
-        if (alive) setSnapshot(d);
+        const d = await api(`/queues/${selected}`);
+        if (alive) { setSnapshot(d); setError(""); }
       } catch (e) {
         // Evita exibir erro na tela se a fila foi alterada ou removida
         if (alive && selected) setError(e.message);
@@ -127,6 +127,7 @@ export default function ProviderPage({ setPage }) {
 
   const create = async () => {
     if (!form.trim()) return;
+    setError("");
     try {
       const d = await api("/queues", {
         method: "POST",
@@ -135,6 +136,7 @@ export default function ProviderPage({ setPage }) {
       });
       setQueues([d.queue, ...queues]);
       setSelected(d.queue.id);
+      setSnapshot(null);
       setForm("");
     } catch (e) {
       setError(e.message);
@@ -159,9 +161,7 @@ export default function ProviderPage({ setPage }) {
       });
       const updatedQueues = queues.filter((q) => q.id !== targetId);
       setQueues(updatedQueues);
-      if (updatedQueues[0]) {
-        setSelected(updatedQueues[0].id);
-      }
+      setSelected(updatedQueues[0]?.id ?? null);
     } catch (e) {
       setError(e.message);
       // Caso falte o método no backend, restaura o ID selecionado localmente
@@ -171,11 +171,13 @@ export default function ProviderPage({ setPage }) {
 
   const next = async () => {
     setLoading(true);
+    setError("");
     try {
       await api(`/queues/${selected}/next`, {
         method: "POST",
         token: sess.token,
       });
+      setSnapshot(await api(`/queues/${selected}`));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -183,23 +185,26 @@ export default function ProviderPage({ setPage }) {
     }
   };
 
-  const finish = async () => {
-    if (snapshot?.current)
-      await api(`/queues/${selected}/finish`, {
+  const updateTicket = async (action) => {
+    if (!snapshot?.current || loading) return;
+    setLoading(true);
+    setError("");
+    try {
+      await api(`/queues/${selected}/${action}`, {
         method: "POST",
         token: sess.token,
         body: { ticketId: snapshot.current.id },
       });
+      setSnapshot(await api(`/queues/${selected}`));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const skip = async () => {
-    if (snapshot?.current)
-      await api(`/queues/${selected}/skip`, {
-        method: "POST",
-        token: sess.token,
-        body: { ticketId: snapshot.current.id },
-      });
-  };
+  const finish = () => updateTicket("finish");
+  const skip = () => updateTicket("skip");
 
   return (
     <main className="page">
@@ -233,7 +238,7 @@ export default function ProviderPage({ setPage }) {
             Fila
             <select
               value={selected || ""}
-              onChange={(e) => setSelected(Number(e.target.value))}
+              onChange={(e) => { setSnapshot(null); setError(""); setSelected(Number(e.target.value)); }}
             >
               <option value="" disabled>
                 Selecione
@@ -254,7 +259,8 @@ export default function ProviderPage({ setPage }) {
           </button>
         </div>
 
-        {snapshot && (
+        {!selected && <p>Crie uma fila para começar a atender.</p>}
+        {selected && snapshot && snapshot.queue.id === selected && (
           <>
             <div className="queue-code">
               Código: <b>{snapshot.queue.code}</b>
@@ -275,13 +281,13 @@ export default function ProviderPage({ setPage }) {
               </div>
             </div>
             <div className="actions">
-              <button className="primary" disabled={loading} onClick={next}>
+              <button className="primary" disabled={loading || !!snapshot.current || snapshot.waitingCount === 0} onClick={next}>
                 CHAMAR O PRÓXIMO
               </button>
-              <button onClick={finish} disabled={!snapshot.current}>
+              <button onClick={finish} disabled={loading || !snapshot.current}>
                 FINALIZAR
               </button>
-              <button onClick={skip} disabled={!snapshot.current}>
+              <button onClick={skip} disabled={loading || !snapshot.current}>
                 PULAR
               </button>
             </div>

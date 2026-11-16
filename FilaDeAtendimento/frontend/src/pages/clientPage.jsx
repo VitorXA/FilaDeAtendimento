@@ -33,17 +33,19 @@ export default function ClientPage({ setPage }) {
   }
   useEffect(() => {
     if (!ticket) return;
+    let alive = true;
     const poll = async () => {
       try {
         const d = await api(`/tickets/${ticket.id}`);
+        if (!alive) return;
         setTicket(d.ticket);
         const q = await api(`/queues/${ticket.queue_id}`);
-        setQueue(q);
-      } catch {}
+        if (alive) { setQueue(q); setError(""); }
+      } catch (e) { if (alive) setError(e.message); }
     };
     poll();
     const i = setInterval(poll, 2000);
-    return () => clearInterval(i);
+    return () => { alive = false; clearInterval(i); };
   }, [ticket?.id]);
   if (ticket)
     return (
@@ -65,7 +67,9 @@ export default function ClientPage({ setPage }) {
                   ? "FOI CHAMADO"
                   : ticket.status === "COMPLETED"
                     ? "FINALIZADO"
-                    : "ATENDIMENTO"}
+                    : ticket.status === "SKIPPED"
+                      ? "PULADO"
+                      : "EM ATENDIMENTO"}
             </b>
           </p>
           <div className="stats">
@@ -84,6 +88,7 @@ export default function ClientPage({ setPage }) {
               <strong>{queue?.current?.number ?? "—"}</strong>
             </div>
           </div>
+          {error && <p className="error">{error}</p>}
           {ticket.status === "CALLED" && (
             <div className="alert">Sua senha foi chamada!</div>
           )}
